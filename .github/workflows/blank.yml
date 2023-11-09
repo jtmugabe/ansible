@@ -1,0 +1,46 @@
+name: DVWA Workflow
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '7.4' # Adjust PHP version as needed
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get install -y apache2 mysql-server
+        sudo service apache2 start
+        sudo service mysql start
+        sudo apt-get install -y php php-mysql
+
+    - name: Configure MySQL
+      run: |
+        echo "create database dvwa;" | mysql -u root
+        echo "grant all privileges on dvwa.* to 'root'@'localhost' identified by '';" | mysql -u root
+        echo "flush privileges;" | mysql -u root
+
+    - name: Set up DVWA
+      run: |
+        cp config/config.inc.php.dist config/config.inc.php
+        sed -i 's/\'\''/\'\''/g' config/config.inc.php
+        sed -i "s/''/'root'/" config/config.inc.php
+        sed -i 's/DB_PASSWORD/""/' config/config.inc.php
+        sed -i 's/security\'\',/security\'\',/g' config/config.inc.php
+
+    - name: Start Apache
+      run: sudo service apache2 restart
+
+    - name: Start MySQL
+      run: sudo service mysql restart
+
+    - name: Run DVWA
+      run: php -S localhost:80 -t .
